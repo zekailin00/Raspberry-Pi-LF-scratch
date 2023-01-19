@@ -1,0 +1,109 @@
+// src/Joystick.lf
+target Cpp {
+    cmake-include: "composition.cmake",
+};
+
+public preamble {=
+    #include <chrono>
+    #include <functional>
+    #include <memory>
+    #include <string>
+    #include <vector>
+    #include <cstdio>
+    #include <iostream>
+    #include <iomanip>
+    #include <sstream>
+
+    #include <unistd.h>
+    #include <sys/ioctl.h>
+    #include <linux/joystick.h>
+    #include <fcntl.h>
+
+    #ifndef INT16_MAX
+    #define INT16_MAX 32767
+    #endif
+
+    struct ControllerData {
+        std::vector<char> joy_button;
+        std::vector<int> joy_axis;
+    };
+
+    static float angleData;
+    static float throttleData;
+=}
+
+reactor JoystickDriver {
+    // Instantiate the publisher node as a sate variable;
+    output angle:float;
+    output throttle:float;
+    timer t(0, 25 ms);
+
+    state count_ : size_t;
+    state JOYSTICK_DEV : std::string;
+    state data : ControllerData;
+    state joystick_fd : int;
+    state num_of_axis : int;
+    state num_of_buttons : int;
+    state name_of_joystick : char[80];
+
+    reaction(startup) {=
+        JOYSTICK_DEV = "/dev/input/js0";
+        count_ = 0;
+
+        std::cout << "[LF] Open joystick file descriptor;" << std::endl;
+
+        joystick_fd = open(JOYSTICK_DEV.c_str(), O_RDONLY | O_NONBLOCK);
+        if (joystick_fd < 0) 
+        {
+            std::cout << "[LF] Joystick error: " << joystick_fd; 
+            exit(1);
+        }
+
+        std::cout<< "[LF] Read joystick meta data."<<std::endl;
+
+        ioctl(joystick_fd, JSIOCGAXES, &(num_of_axis));
+        std::cout<< "joystick Number of Axes: " << num_of_axis<<std::endl;
+
+        ioctl(joystick_fd, JSIOCGBUTTONS, &(num_of_buttons));
+        std::cout << "Joystick Number of Buttons: " << num_of_buttons<<std::endl;
+
+        ioctl(joystick_fd, JSIOCGNAME(80), name_of_joystick);
+        //std::cout << "Joystick Connected: " << name_of_joystick << std::endl;
+    
+        data.joy_button.resize(num_of_buttons, 0);
+        data.joy_axis.resize(num_of_axis, 0);
+
+        std::cout<< "[LF] Finished reactor startup."<<std::endl;
+    =}
+
+    reaction(t) -> angle, throttle {=
+        count_++;
+        js_event js;
+	int retval;
+        while(retval = read(joystick_fd, &js, sizeof(js_event)) > 0)
+	{
+
+        	switch (js.type & ~JS_EVENT_INIT)
+        	{
+        	case JS_EVENT_AXIS:
+            		if(!((int)js.number>=data.joy_axis.size()))
+            			data.joy_axis[(int)js.number]= js.value;
+            		break;
+      	  	case JS_EVENT_BUTTON:
+           	 	if(!((int)js.number>=data.joy_button.size()))
+            			data.joy_button[(int)js.number]= js.value;
+           		break;
+        	}
+	}
+	//std::cout << "angle: " << data.joy_axis[1] << std::endl;
+        angle.set(-(static_cast<float>(data.joy_axis[0])/INT16_MAX));
+        throttle.set(-(static_cast<float>(data.joy_axis[1])/INT16_MAX));
+
+    =}
+}
+
+main reactor {
+    jsDriver = new JoystickDriver();
+
+    
+}

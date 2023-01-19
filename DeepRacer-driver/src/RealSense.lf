@@ -1,0 +1,49 @@
+target Cpp {
+    cmake-include: "composition.cmake"
+};
+
+public preamble {=
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <iostream>
+
+    #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
+=}
+
+reactor RealSenseDriver {
+
+    output distance:float;
+    timer t(0, 100 ms);
+    state pipeline:rs2::pipeline;
+
+    reaction(startup) {=
+        pipeline.start();
+    =}
+
+    reaction(t) -> distance {=
+        // Block program until frames arrive
+        rs2::frameset frames = pipeline.wait_for_frames();
+
+        // Try to get a frame of a depth image
+        rs2::depth_frame depth = frames.get_depth_frame();
+
+        // Get the depth frame's dimensions
+        auto width = depth.get_width();
+        auto height = depth.get_height();
+
+        // Query the distance from the camera to the object in the center of the image
+        float dist_to_center = depth.get_distance(width / 2, height / 2);
+        if (dist_to_center != 0)
+            distance.set(dist_to_center);
+    =}
+}
+
+main reactor {
+    timer t(0, 100 ms)
+    camera = new RealSenseDriver();
+
+    reaction(camera.distance) {=
+        std::cout << "Camera distance: " << *camera.distance.get() 
+                  << " at " << get_elapsed_logical_time() << std::endl;
+    =}
+}

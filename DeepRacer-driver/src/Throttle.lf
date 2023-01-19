@@ -1,0 +1,36 @@
+target Cpp {
+    cmake-include: "composition.cmake"
+};
+
+public preamble {=
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <iostream>
+
+    #include <pigpio.h>
+=}
+
+reactor ThrottleDriver (bias:int(1500), sensitivity:int(-200), pin:int(3)) {
+    input norm_throttle:float;
+    state pwm_throttle:int(bias);
+
+    reaction(startup) {=
+       // while (gpioInitialise() < 0)
+            std::cout << "GPIO initialization Throttle!" << std::endl;
+    =}
+
+    reaction(norm_throttle) {=
+        pwm_throttle = bias + *norm_throttle.get() * sensitivity;
+        gpioServo(pin, pwm_throttle);
+        std::cout << "Set speed to " << pwm_throttle << std::endl;
+    =}
+}
+
+main reactor {
+    timer t(0, 100 ms)
+    servo = new ThrottleDriver();
+
+    reaction(t) -> servo.norm_throttle {=
+        servo.norm_throttle.set(0.0f);
+    =}
+}

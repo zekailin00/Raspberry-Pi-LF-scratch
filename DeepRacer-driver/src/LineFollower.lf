@@ -1,0 +1,27 @@
+target Cpp {
+    cmake-include: "composition.cmake"
+};
+
+public preamble {=
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <iostream>
+
+    #include <librealsense2/rs.hpp> // Include RealSense Cross Platform API
+=}
+
+reactor LineFollowerController {
+
+    output angle:float;
+    input colorFrame:rs2::frame;
+
+    reaction(colorFrame) -> angle {=
+        
+    =}
+}
+
+main reactor {
+    timer t(0, 100 ms)
+    controller = new LineFollowerController();
+
+}

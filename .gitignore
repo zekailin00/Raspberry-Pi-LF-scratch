@@ -1,0 +1,10 @@
+*/bin
+*/build
+*/lib
+*/share
+*/src-gen
+*.so
+*/install
+*/log
+*.cmake
+*/CMakeFiles

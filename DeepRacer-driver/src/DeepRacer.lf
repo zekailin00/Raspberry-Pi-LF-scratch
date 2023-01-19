@@ -1,0 +1,30 @@
+target Cpp {
+    cmake-include: "composition.cmake"
+};
+
+import AngleDriver from "Angle.lf"; 
+import JoystickDriver from "Joystick.lf"
+import ThrottleDriver from "Throttle.lf"
+import RealSenseDriver from "RealSense.lf"
+
+public preamble {=
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <iostream>
+
+    #include <pigpio.h>
+=}
+
+main reactor {
+    servoDriver = new AngleDriver();
+    throttleDriver = new ThrottleDriver();
+    jsDriver = new JoystickDriver();
+    realSense = new RealSenseDriver();
+
+    jsDriver.angle -> servoDriver.norm_angle;
+    jsDriver.throttle -> throttleDriver.norm_throttle;
+    reaction(realSense.distance) {=
+        std::cout << "Camera distance: " << *camera.distance.get() 
+                  << " at " << get_elapsed_logical_time() << std::endl;
+    =}
+}
