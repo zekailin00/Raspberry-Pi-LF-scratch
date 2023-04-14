@@ -15,7 +15,7 @@ reactor AngleDriver (bias:int(1400), sensitivity:int(400), pin:int(4)) {
     state pwm_angle:int(bias);
 
     reaction(startup) {=
-        while (gpioInitialise() < 0)
+       while (gpioInitialise() < 0)
             std::cout << "GPIO initialization failed!" << std::endl;
     =}
 
@@ -23,6 +23,11 @@ reactor AngleDriver (bias:int(1400), sensitivity:int(400), pin:int(4)) {
         pwm_angle = bias + *norm_angle.get() * sensitivity;
         gpioServo(pin, pwm_angle);
         //std::cout << "Set PWM to " << pwm_angle << std::endl;
+    =}
+
+    reaction(shutdown) {=
+	gpioTerminate();
+	std::cout << "GPIO shutdown" << std::endl;
     =}
 }
 

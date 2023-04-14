@@ -1,11 +1,12 @@
 target Cpp {
-    cmake-include: "composition.cmake"
+    cmake-include: "composition.cmake",
+    // timeout: 2s
+
 };
 
 import AngleDriver from "Angle.lf"; 
-import JoystickDriver from "Joystick.lf"
 import ThrottleDriver from "Throttle.lf"
-import RealSenseDriver from "RealSense.lf"
+import LineFollowerController from "LineFollower.lf"
 
 public preamble {=
     #include <stdio.h>
@@ -16,15 +17,12 @@ public preamble {=
 =}
 
 main reactor {
+
     servoDriver = new AngleDriver();
     throttleDriver = new ThrottleDriver();
-    jsDriver = new JoystickDriver();
-    realSense = new RealSenseDriver();
+    jsDriver = new LineFollowerController();
 
     jsDriver.angle -> servoDriver.norm_angle;
     jsDriver.throttle -> throttleDriver.norm_throttle;
-    reaction(realSense.distance) {=
-        std::cout << "Camera distance: " << *camera.distance.get() 
-                  << " at " << get_elapsed_logical_time() << std::endl;
-    =}
+
 }
